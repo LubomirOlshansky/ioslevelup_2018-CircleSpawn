@@ -10,21 +10,22 @@ import UIKit
 
 class ViewController: UIViewController {
     
-    
-    @IBOutlet weak var viewTap: UIView!
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        tapGesture = UITapGestureRecognizer(target: self, action: #selector(ViewController.myViewTapped))
-        tapGesture.numberOfTapsRequired = 2
-        tapGesture.numberOfTouchesRequired = 1
-        viewTap.addGestureRecognizer(tapGesture)
+        doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(ViewController.myViewTapped))
+        doubleTapGesture.numberOfTapsRequired = 2
+        doubleTapGesture.numberOfTouchesRequired = 1
+        doubleTapGesture.delegate = self
+        tripleTapGesture = UITapGestureRecognizer(target: self, action: #selector(ViewController.myViewTapped))
+        tripleTapGesture.numberOfTapsRequired = 3
+        tripleTapGesture.numberOfTouchesRequired = 1
+        tripleTapGesture.delegate = self
+        self.view.addGestureRecognizer(doubleTapGesture)
     }
     
-  
-    
-    var tapGesture  = UITapGestureRecognizer()
+    var doubleTapGesture  = UITapGestureRecognizer()
+    var tripleTapGesture  = UITapGestureRecognizer()
     
     @objc func myViewTapped(touch: UITapGestureRecognizer) {
         let touchPoint = touch.location(in: self.view)
@@ -32,18 +33,17 @@ class ViewController: UIViewController {
         circleView.backgroundColor = UIColor.randomBrightColor()
         circleView.layer.cornerRadius = 50
         let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(recognizer:)))
-        longPressRecognizer.minimumPressDuration = 1
+        longPressRecognizer.minimumPressDuration = 0.3
         longPressRecognizer.delegate = self
         circleView.addGestureRecognizer(longPressRecognizer)
+        circleView.addGestureRecognizer(tripleTapGesture)
         self.view.addSubview(circleView)
     }
     
     @objc func handleLongPress(recognizer: UILongPressGestureRecognizer)  {
         print("long press detected")
         if recognizer.state == UIGestureRecognizerState.began {
-            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(recognizer:)))
-            panRecognizer.delegate = self
-            recognizer.view?.addGestureRecognizer(panRecognizer)
+             print("long press began")
             if let view = recognizer.view {
                 UIView.animate(withDuration: 0.5, animations: {
                     view.frame.size.width += 10
@@ -52,10 +52,19 @@ class ViewController: UIViewController {
                     view.alpha = 0.5
                 }, completion: nil)
             }
-            
-            print("long press began")
         }
-        if recognizer.state == UIGestureRecognizerState.ended{
+        else if recognizer.state == .changed {
+             print("long press changed")
+            guard let view = recognizer.view else {
+                return
+            }
+
+            let location = recognizer.location(in: self.view)
+            view.center = CGPoint(x:view.center.x + (location.x - view.center.x),
+                                              y:view.center.y + (location.y - view.center.y))
+        }
+        else if recognizer.state == UIGestureRecognizerState.ended{
+             print("long press ended")
             if let view = recognizer.view {
                 UIView.animate(withDuration: 0.5, animations: {
                     view.frame.size.width -= 10
@@ -66,19 +75,6 @@ class ViewController: UIViewController {
             }
         }
     }
-    @objc func handlePan(recognizer: UIPanGestureRecognizer)  {
-        print("pan detected")
-        let translation = recognizer.translation(in: self.view)
-        if let view = recognizer.view {
-            view.center = CGPoint(x:view.center.x + translation.x,
-                                  y:view.center.y + translation.y)
-        }
-        
-        recognizer.setTranslation(CGPoint.zero, in: self.view)
-        
-    }
-    
-    
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
@@ -94,8 +90,6 @@ extension CGFloat {
         assert(max > min)
         return min + ((max - min) * CGFloat(arc4random()) / CGFloat(UInt32.max))
     }
-    
-    
 }
 
 extension UIColor {
